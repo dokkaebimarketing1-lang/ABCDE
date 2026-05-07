@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download audio from a YouTube URL as an MP3 file."""
+"""Download audio from a YouTube URL as an MP3 file, optionally trimmed."""
 
 import argparse
 import sys
@@ -15,14 +15,30 @@ except ImportError:
     sys.exit(1)
 
 
-def download_audio(url: str, output_dir: Path, audio_format: str = "mp3", quality: str = "192") -> Path:
+def _format_ts(seconds: float) -> str:
+    seconds = max(0.0, float(seconds))
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    return f"{int(h):02d}:{int(m):02d}:{s:06.3f}"
+
+
+def download_audio(
+    url: str,
+    output_dir: Path,
+    audio_format: str = "mp3",
+    quality: str = "192",
+    start: float = 0.0,
+    duration: float | None = None,
+) -> Path:
     """Download the audio track of a YouTube video.
 
+    If ``duration`` is set, only that many seconds (starting at ``start``) are kept.
     Returns the path to the resulting audio file.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    outtmpl = str(output_dir / "%(title)s.%(ext)s")
+    suffix = f"_{int(duration)}s" if duration else ""
+    outtmpl = str(output_dir / f"%(title)s{suffix}.%(ext)s")
 
     ydl_opts = {
         "format": "bestaudio/best",
@@ -38,9 +54,14 @@ def download_audio(url: str, output_dir: Path, audio_format: str = "mp3", qualit
         ],
     }
 
+    if duration is not None:
+        # Pass -ss/-t to ffmpeg used by the extract-audio post-processor.
+        ydl_opts["postprocessor_args"] = {
+            "ffmpegextractaudio": ["-ss", _format_ts(start), "-t", _format_ts(duration)],
+        }
+
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        # After post-processing the file extension becomes audio_format.
         final_path = Path(ydl.prepare_filename(info)).with_suffix(f".{audio_format}")
 
     return final_path
@@ -68,10 +89,31 @@ def main() -> int:
         default="192",
         help="Audio bitrate in kbps (default: 192)",
     )
+    parser.add_argument(
+        "-s",
+        "--start",
+        type=float,
+        default=0.0,
+        help="Start offset in seconds when trimming (default: 0)",
+    )
+    parser.add_argument(
+        "-d",
+        "--duration",
+        type=float,
+        default=None,
+        help="Duration in seconds to keep. Omit to download the full track.",
+    )
     args = parser.parse_args()
 
     try:
-        path = download_audio(args.url, Path(args.output_dir), args.format, args.quality)
+        path = download_audio(
+            args.url,
+            Path(args.output_dir),
+            args.format,
+            args.quality,
+            args.start,
+            args.duration,
+        )
     except yt_dlp.utils.DownloadError as e:
         sys.stderr.write(f"Download failed: {e}\n")
         return 1

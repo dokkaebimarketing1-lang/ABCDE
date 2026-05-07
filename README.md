@@ -34,6 +34,12 @@ python download_audio.py "https://youtu.be/gSWxf6ar6pM" \
   --output-dir ./music \
   --format m4a \
   --quality 256
+
+# 처음 15초만 잘라서 저장
+python download_audio.py "https://youtu.be/gSWxf6ar6pM" --duration 15
+
+# 30초 지점부터 15초 구간만 저장
+python download_audio.py "https://youtu.be/gSWxf6ar6pM" --start 30 --duration 15
 ```
 
 ### 옵션
@@ -44,6 +50,8 @@ python download_audio.py "https://youtu.be/gSWxf6ar6pM" \
 | `-o`, `--output-dir` | 저장 폴더 | `downloads` |
 | `-f`, `--format` | 오디오 포맷 (`mp3`, `m4a`, `wav`, `opus`, `aac`, `flac`) | `mp3` |
 | `-q`, `--quality` | 비트레이트 (kbps) | `192` |
+| `-s`, `--start` | 잘라낼 시작 지점 (초) | `0` |
+| `-d`, `--duration` | 잘라낼 길이 (초). 미지정 시 전체 다운로드 | 없음 |
 
 ## 주의 사항
 
