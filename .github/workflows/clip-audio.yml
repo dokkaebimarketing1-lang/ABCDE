@@ -57,28 +57,50 @@ jobs:
           yt-dlp --version
 
       - name: Download / clip audio
+        id: download
         env:
           URL: ${{ inputs.url || 'https://youtu.be/gSWxf6ar6pM' }}
           START: ${{ inputs.start || '0' }}
           DURATION: ${{ inputs.duration || '15' }}
           FORMAT: ${{ inputs.format || 'mp3' }}
           QUALITY: ${{ inputs.quality || '192' }}
+        continue-on-error: true
         run: |
-          set -eux
+          set -ux
           mkdir -p clips
           ARGS=("$URL" --output-dir clips --format "$FORMAT" --quality "$QUALITY" --start "$START")
           if [ -n "$DURATION" ]; then
             ARGS+=(--duration "$DURATION")
           fi
-          python download_audio.py "${ARGS[@]}"
-          ls -lh clips
+          python download_audio.py "${ARGS[@]}" 2>&1 | tee clips/_run.log
+          rc=${PIPESTATUS[0]}
+          ls -lh clips || true
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          # Always succeed so subsequent steps run; we'll fail explicitly below.
+          exit 0
+
+      - name: List clips and fail if no audio produced
+        id: check
+        run: |
+          set -u
+          mkdir -p clips
+          shopt -s nullglob
+          audio=( clips/*.mp3 clips/*.m4a clips/*.wav clips/*.opus clips/*.aac clips/*.flac )
+          ls -lh clips || true
+          if [ ${#audio[@]} -eq 0 ]; then
+            echo "no audio produced" >&2
+            echo "produced=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "produced=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload audio artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: audio-clip
           path: clips/*
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Publish clip via gh release
@@ -138,3 +160,9 @@ jobs:
             echo "Release tag: \`clip-${{ github.run_id }}\`"
             echo "Branch: \`${GITHUB_REF_NAME}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail the run if no audio was produced
+        if: always() && steps.check.outputs.produced != 'true'
+        run: |
+          echo "::error::No audio file produced; see clips/_run.log committed back to the branch."
+          exit 1
