@@ -51,10 +51,12 @@ jobs:
         run: |
           set -eux
           pip install --upgrade pip
-          # Install the nightly yt-dlp build, which includes the most
-          # recent YouTube extractor fixes for cloud-IP bot detection.
+          pip install -r requirements.txt
+          # Bring yt-dlp up to nightly for the latest YouTube extractor
+          # fixes; do this AFTER requirements.txt so we keep pytubefix.
           pip install --upgrade --pre "yt-dlp[default]"
           yt-dlp --version
+          python -c "import pytubefix; print('pytubefix', pytubefix.__version__)"
 
       - name: Download / clip audio
         id: download

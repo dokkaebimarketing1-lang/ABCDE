@@ -150,8 +150,20 @@ PIPED_INSTANCES = [
     "https://pipedapi.kavin.rocks",
     "https://api-piped.mha.fi",
     "https://pipedapi.tokhmi.xyz",
-    "https://pipedapi.adminforge.de",
-    "https://pipedapi.smnz.de",
+    "https://pipedapi.r4fo.com",
+    "https://piapi.ggtyq.com",
+    "https://api.piped.private.coffee",
+    "https://pipedapi.drgns.space",
+    "https://pipedapi.in.projectsegfau.lt",
+    "https://piped-api.codespace.cz",
+    "https://pipedapi.darkness.services",
+    "https://pipedapi.privacydev.net",
+]
+
+COBALT_INSTANCES = [
+    "https://api.cobalt.tools",
+    "https://cobalt-api.kwiatekmiki.com",
+    "https://api.dl.khinenw.dev",
 ]
 
 
@@ -220,6 +232,59 @@ def _download_with_piped(
     raise RuntimeError(f"All Piped instances failed: {last_err}")
 
 
+def _http_post_json(url: str, payload: dict, timeout: int = 30) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "audio-clip/1.0",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _download_with_cobalt(
+    url: str,
+    output_dir: Path,
+    audio_format: str,
+    quality: str,
+    start: float,
+    duration: float | None,
+) -> Path:
+    last_err: Exception | None = None
+    for inst in COBALT_INSTANCES:
+        try:
+            data = _http_post_json(
+                inst + "/",
+                {"url": url, "downloadMode": "audio", "audioFormat": "mp3"},
+            )
+            status = data.get("status")
+            if status not in ("tunnel", "redirect", "stream", "success"):
+                raise RuntimeError(f"cobalt status={status}: {data}")
+            tunnel_url = data.get("url") or data.get("audio")
+            if not tunnel_url:
+                raise RuntimeError(f"cobalt response missing url: {data}")
+            video_id = _extract_video_id(url)
+            raw = output_dir / f"{video_id}.cobalt"
+            _http_download(tunnel_url, raw)
+            suffix = f"_{int(duration)}s" if duration else ""
+            final = output_dir / f"{video_id}{suffix}.{audio_format}"
+            _ffmpeg_convert(raw, final, audio_format, quality, start, duration)
+            if raw.exists() and raw != final:
+                raw.unlink()
+            return final
+        except Exception as e:
+            last_err = e
+            sys.stderr.write(f"cobalt {inst} failed: {e}\n")
+            continue
+    raise RuntimeError(f"All cobalt instances failed: {last_err}")
+
+
 def download_audio(
     url: str,
     output_dir: Path,
@@ -235,6 +300,7 @@ def download_audio(
         ("yt-dlp", _download_with_ytdlp),
         ("pytubefix", _download_with_pytubefix),
         ("piped", _download_with_piped),
+        ("cobalt", _download_with_cobalt),
     ):
         try:
             return fn(url, output_dir, audio_format, quality, start, duration)
