@@ -6,9 +6,12 @@ Tries yt-dlp first, then falls back to pytubefix if yt-dlp can't download
 """
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 
@@ -143,6 +146,80 @@ def _download_with_pytubefix(
     return final_path
 
 
+PIPED_INSTANCES = [
+    "https://pipedapi.kavin.rocks",
+    "https://api-piped.mha.fi",
+    "https://pipedapi.tokhmi.xyz",
+    "https://pipedapi.adminforge.de",
+    "https://pipedapi.smnz.de",
+]
+
+
+def _extract_video_id(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.hostname in ("youtu.be",):
+        return parsed.path.lstrip("/")
+    qs = urllib.parse.parse_qs(parsed.query)
+    if "v" in qs:
+        return qs["v"][0]
+    parts = [p for p in parsed.path.split("/") if p]
+    if parts and parts[0] in ("shorts", "live", "embed") and len(parts) > 1:
+        return parts[1]
+    raise ValueError(f"Cannot extract video id from URL: {url}")
+
+
+def _http_json(url: str, timeout: int = 30) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": "audio-clip/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _http_download(url: str, dst: Path, timeout: int = 120) -> None:
+    req = urllib.request.Request(url, headers={"User-Agent": "audio-clip/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp, open(dst, "wb") as f:
+        shutil.copyfileobj(resp, f, length=65536)
+
+
+def _download_with_piped(
+    url: str,
+    output_dir: Path,
+    audio_format: str,
+    quality: str,
+    start: float,
+    duration: float | None,
+) -> Path:
+    video_id = _extract_video_id(url)
+    last_err: Exception | None = None
+    for inst in PIPED_INSTANCES:
+        try:
+            data = _http_json(f"{inst}/streams/{video_id}")
+            streams = data.get("audioStreams") or []
+            if not streams:
+                raise RuntimeError(f"no audioStreams from {inst}")
+            best = max(streams, key=lambda s: s.get("bitrate", 0))
+            title = _sanitize(data.get("title") or video_id)
+            ext = best.get("format", "mp4").lower()
+            if ext == "m4a":
+                ext = "m4a"
+            elif "opus" in ext or "webm" in ext:
+                ext = "webm"
+            else:
+                ext = "m4a"
+            raw = output_dir / f"{title}.{ext}"
+            _http_download(best["url"], raw)
+            suffix = f"_{int(duration)}s" if duration else ""
+            final = output_dir / f"{title}{suffix}.{audio_format}"
+            _ffmpeg_convert(raw, final, audio_format, quality, start, duration)
+            if raw.exists() and raw != final:
+                raw.unlink()
+            return final
+        except Exception as e:
+            last_err = e
+            sys.stderr.write(f"piped {inst} failed: {e}\n")
+            continue
+    raise RuntimeError(f"All Piped instances failed: {last_err}")
+
+
 def download_audio(
     url: str,
     output_dir: Path,
@@ -154,16 +231,16 @@ def download_audio(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     errors: list[str] = []
-    try:
-        return _download_with_ytdlp(url, output_dir, audio_format, quality, start, duration)
-    except Exception as e:
-        errors.append(f"yt-dlp: {e}")
-        sys.stderr.write(f"\nyt-dlp failed: {e}\nFalling back to pytubefix...\n")
-
-    try:
-        return _download_with_pytubefix(url, output_dir, audio_format, quality, start, duration)
-    except Exception as e:
-        errors.append(f"pytubefix: {e}")
+    for name, fn in (
+        ("yt-dlp", _download_with_ytdlp),
+        ("pytubefix", _download_with_pytubefix),
+        ("piped", _download_with_piped),
+    ):
+        try:
+            return fn(url, output_dir, audio_format, quality, start, duration)
+        except Exception as e:
+            sys.stderr.write(f"\n{name} failed: {e}\nTrying next backend...\n")
+            errors.append(f"{name}: {e}")
 
     raise RuntimeError("All downloaders failed:\n  " + "\n  ".join(errors))
 
