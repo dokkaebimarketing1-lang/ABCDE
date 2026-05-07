@@ -1,0 +1,28 @@
+[youtube] Extracting URL: https://youtu.be/gSWxf6ar6pM
+[youtube] gSWxf6ar6pM: Downloading initial data API JSON
+[youtube] gSWxf6ar6pM: Downloading android player API JSON
+[youtube] gSWxf6ar6pM: Downloading ios player API JSON
+[youtube] gSWxf6ar6pM: Downloading iframe API JS
+[youtube] gSWxf6ar6pM: Downloading player 8fb635c2-main
+[youtube] gSWxf6ar6pM: Downloading tv player API JSON
+[youtube] gSWxf6ar6pM: Downloading web player API JSON
+WARNING: [youtube] No title found in player responses; falling back to title from initial data. Other metadata may also be missing
+ERROR: [youtube] gSWxf6ar6pM: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+
+yt-dlp failed: ERROR: [youtube] gSWxf6ar6pM: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+Trying next backend...
+
+pytubefix failed: No module named 'pytubefix'
+Trying next backend...
+piped https://pipedapi.kavin.rocks failed: HTTP Error 526: <none>
+piped https://api-piped.mha.fi failed: HTTP Error 522: <none>
+piped https://pipedapi.tokhmi.xyz failed: Remote end closed connection without response
+piped https://pipedapi.adminforge.de failed: <urlopen error [Errno -2] Name or service not known>
+piped https://pipedapi.smnz.de failed: <urlopen error [Errno 101] Network is unreachable>
+
+piped failed: All Piped instances failed: <urlopen error [Errno 101] Network is unreachable>
+Trying next backend...
+Download failed: All downloaders failed:
+  yt-dlp: ERROR: [youtube] gSWxf6ar6pM: Sign in to confirm you’re not a bot. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies. Also see  https://github.com/yt-dlp/yt-dlp/wiki/Extractors#exporting-youtube-cookies  for tips on effectively exporting YouTube cookies
+  pytubefix: No module named 'pytubefix'
+  piped: All Piped instances failed: <urlopen error [Errno 101] Network is unreachable>
