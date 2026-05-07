@@ -31,6 +31,9 @@ on:
         required: false
         default: "192"
 
+permissions:
+  contents: write
+
 jobs:
   clip:
     runs-on: ubuntu-latest
@@ -55,19 +58,35 @@ jobs:
           FORMAT: ${{ inputs.format || 'mp3' }}
           QUALITY: ${{ inputs.quality || '192' }}
         run: |
-          ARGS=("$URL" --output-dir downloads --format "$FORMAT" --quality "$QUALITY" --start "$START")
+          mkdir -p clips
+          ARGS=("$URL" --output-dir clips --format "$FORMAT" --quality "$QUALITY" --start "$START")
           if [ -n "$DURATION" ]; then
             ARGS+=(--duration "$DURATION")
           fi
           python download_audio.py "${ARGS[@]}"
 
-      - name: List downloads
-        run: ls -lh downloads
+      - name: List clips
+        run: ls -lh clips
 
       - name: Upload audio artifact
         uses: actions/upload-artifact@v4
         with:
           name: audio-clip
-          path: downloads/*
+          path: clips/*
           if-no-files-found: error
           retention-days: 7
+
+      - name: Commit clip back to branch
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f clips/
+          if git diff --cached --quiet; then
+            echo "No clip changes to commit."
+          else
+            git commit -m "Add audio clip(s) from workflow run ${{ github.run_id }}"
+            # Pull --rebase first in case the branch moved during the run.
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

@@ -5,14 +5,8 @@ __pycache__/
 .venv/
 venv/
 
-# Downloads
+# Downloads (local) — clips/ is committed by the GitHub Actions workflow.
 downloads/
-*.mp3
-*.m4a
-*.wav
-*.opus
-*.aac
-*.flac
 *.webm
 *.part
 
