@@ -45,6 +45,24 @@ def download_audio(
         "outtmpl": outtmpl,
         "noplaylist": True,
         "quiet": False,
+        "force_ipv4": True,
+        "retries": 10,
+        "fragment_retries": 10,
+        "extractor_retries": 10,
+        # Try several YouTube player clients to dodge bot-detection on cloud IPs.
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "tv", "web"],
+                "player_skip": ["webpage", "configs"],
+            }
+        },
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Linux; Android 13; Pixel 7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Mobile Safari/537.36"
+            ),
+        },
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
