@@ -53,6 +53,14 @@ python download_audio.py "https://youtu.be/gSWxf6ar6pM" --start 30 --duration 15
 | `-s`, `--start` | 잘라낼 시작 지점 (초) | `0` |
 | `-d`, `--duration` | 잘라낼 길이 (초). 미지정 시 전체 다운로드 | 없음 |
 
+## GitHub Actions 에서 실행 (로컬 환경 없이 받기)
+
+`.github/workflows/clip-audio.yml` 워크플로가 포함되어 있어, 로컬에 Python/ffmpeg를 설치하지 않고도 GitHub 웹에서 바로 mp3를 받을 수 있습니다.
+
+1. GitHub 저장소 → **Actions** 탭 → **Clip YouTube audio** 워크플로 선택
+2. **Run workflow** 클릭 후 입력값 지정 (기본값: 영상 URL, 시작 0초, 길이 15초, mp3, 192kbps)
+3. 실행이 끝나면 해당 run 의 **Artifacts** 섹션에서 `audio-clip` 아카이브 다운로드
+
 ## 주의 사항
 
 저작권이 보호되는 콘텐츠를 다운로드할 때는 해당 콘텐츠의 라이선스와 YouTube 이용약관을 반드시 준수하세요.

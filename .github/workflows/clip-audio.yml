@@ -1,0 +1,60 @@
+name: Clip YouTube audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "YouTube URL"
+        required: true
+        default: "https://youtu.be/gSWxf6ar6pM"
+      start:
+        description: "Start offset in seconds"
+        required: false
+        default: "0"
+      duration:
+        description: "Clip length in seconds (empty = full track)"
+        required: false
+        default: "15"
+      format:
+        description: "Audio format"
+        required: false
+        default: "mp3"
+      quality:
+        description: "Bitrate (kbps)"
+        required: false
+        default: "192"
+
+jobs:
+  clip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Download / clip audio
+        run: |
+          ARGS=("${{ inputs.url }}" --output-dir downloads --format "${{ inputs.format }}" --quality "${{ inputs.quality }}" --start "${{ inputs.start }}")
+          if [ -n "${{ inputs.duration }}" ]; then
+            ARGS+=(--duration "${{ inputs.duration }}")
+          fi
+          python download_audio.py "${ARGS[@]}"
+
+      - name: List downloads
+        run: ls -lh downloads
+
+      - name: Upload audio artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-clip
+          path: downloads/*
+          if-no-files-found: error
+          retention-days: 7
