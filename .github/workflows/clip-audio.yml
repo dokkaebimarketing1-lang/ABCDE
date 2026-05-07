@@ -1,6 +1,13 @@
 name: Clip YouTube audio
 
 on:
+  push:
+    branches:
+      - "claude/add-audio-download-**"
+    paths:
+      - ".github/workflows/clip-audio.yml"
+      - "download_audio.py"
+      - "requirements.txt"
   workflow_dispatch:
     inputs:
       url:
@@ -41,10 +48,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Download / clip audio
+        env:
+          URL: ${{ inputs.url || 'https://youtu.be/gSWxf6ar6pM' }}
+          START: ${{ inputs.start || '0' }}
+          DURATION: ${{ inputs.duration || '15' }}
+          FORMAT: ${{ inputs.format || 'mp3' }}
+          QUALITY: ${{ inputs.quality || '192' }}
         run: |
-          ARGS=("${{ inputs.url }}" --output-dir downloads --format "${{ inputs.format }}" --quality "${{ inputs.quality }}" --start "${{ inputs.start }}")
-          if [ -n "${{ inputs.duration }}" ]; then
-            ARGS+=(--duration "${{ inputs.duration }}")
+          ARGS=("$URL" --output-dir downloads --format "$FORMAT" --quality "$QUALITY" --start "$START")
+          if [ -n "$DURATION" ]; then
+            ARGS+=(--duration "$DURATION")
           fi
           python download_audio.py "${ARGS[@]}"
 
