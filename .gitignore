@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Downloads
+downloads/
+*.mp3
+*.m4a
+*.wav
+*.opus
+*.aac
+*.flac
+*.webm
+*.part
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
